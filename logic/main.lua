@@ -28,7 +28,7 @@ function CMD.auth(fd, cmd)
 
         local sz =json.encode(res)
 
-        socket.write(fd, sz)
+        socket.write(fd, sz .. "\n")
 end
 
 function CMD.kick(fd)
@@ -76,5 +76,7 @@ function tm()
 end
 
 --timer.add(1000, tm);
+
+print("-------Hello Boy----------")
 
 
