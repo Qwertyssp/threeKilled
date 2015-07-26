@@ -1,0 +1,7 @@
+deamon = 0      --not support now
+debug = 1
+listen_port=8989
+worker_count = 1
+bootstrap = "logic/main.lua"
+lualib_path = "logic/?.lua;silly/lualib/?.lua"
+lualib_cpath = "silly/?.so"

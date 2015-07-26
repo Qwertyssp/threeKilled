@@ -1,0 +1,40 @@
+# Object files
+*.o
+*.d
+tags
+gate
+server
+client
+lua
+luac
+game
+*.ko
+*.obj
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+silly
+# Debug files
+*.dSYM/
