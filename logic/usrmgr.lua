@@ -14,7 +14,9 @@ end
 
 function usrmgr.kick(uid)
         local name = db.get("db", uid)
-        assert(name)
+        if name == nil then
+                return ;
+        end
         db.set("db", name, nil)
         db.set("db", uid, nil)
 end

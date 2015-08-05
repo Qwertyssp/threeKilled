@@ -17,16 +17,22 @@ end
 function CMD.room_create(fd, cmd)
         local res = {}
         local rid;
+        local r;
 
         rid = getrid()
         assert(room_list[rid] == nil)
-        room_list[rid] = room:create(cmd.uid)
+        room_list[rid] = room:create(fd, cmd.uid)
 
         res.cmd = "room_create"
         if room_list[rid] then
                 res.rid = rid
         else
                 res.rid = -1
+        end
+
+        if res.rid == rid then
+                r = room_list[rid];
+                usr_pool[fd].room = r;
         end
 
         socket.write(fd, json.encode(res) .. "\n")
@@ -46,17 +52,35 @@ function CMD.room_list(fd, cmd)
 end
 
 function CMD.room_enter(fd, cmd)
+        local re = {}
+        local room;
+        
+        re.cmd = "room_enter";
+        room = room_list[tonumber(cmd.rid)];
+        if room then
+                usr_pool[fd].room = room;
+                re.count = room:enter(fd, cmd)
+        else
+                re.count = -1;
+        end
 
+        socket.write(fd, json.encode(re) .. "\n")
+
+        if (re.count == 2) then
+                room:start()
+        end
 end
 
-function game.process(fd, msg)
-        assert(CMD[msg.cmd])(fd, msg)
+function CMD.room_leave(fd, cmd)
+        local room;
+        assert(usr_pool[fd].room):leave(fd);
+        usr_pool[fd].room = nil
 end
 
 function game.enter(fd)
         usr_pool[fd] = {}
         usr_pool[fd].fd = fd
-        usr_pool[fd].handler = game.process
+        usr_pool[fd].room = nil 
         usr_pool[fd].kick = nil
 end
 
@@ -68,7 +92,11 @@ function game.kick(fd)
 end
 
 function game.handler(fd, cmd)
-        assert(usr_pool[fd].handler)(fd, cmd)
+        if CMD[cmd.cmd] then
+                CMD[cmd.cmd](fd, cmd)
+        else
+                assert(usr_pool[fd].room):handler(fd, cmd)
+        end
 end
 
 return game
