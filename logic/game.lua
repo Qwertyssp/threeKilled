@@ -1,5 +1,4 @@
 local socket = require("socket")
-local json = require("json")
 local room = require("room")
 local game = {}
 
@@ -35,7 +34,7 @@ function CMD.room_create(fd, cmd)
                 usr_pool[fd].room = r;
         end
 
-        socket.write(fd, json.encode(res) .. "\n")
+        socket.write(fd, res)
 end
 
 function CMD.room_list(fd, cmd)
@@ -48,7 +47,7 @@ function CMD.room_list(fd, cmd)
                 rl.room[#rl.room + 1] = {name=v:getname(), rid = k}
         end
 
-        socket.write(fd, json.encode(rl) .. "\n")
+        socket.write(fd, rl)
 end
 
 function CMD.room_enter(fd, cmd)
@@ -64,7 +63,7 @@ function CMD.room_enter(fd, cmd)
                 re.count = -1;
         end
 
-        socket.write(fd, json.encode(re) .. "\n")
+        socket.write(fd, re)
 
         if (re.count == 2) then
                 room:start()

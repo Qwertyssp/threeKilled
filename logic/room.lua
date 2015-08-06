@@ -1,5 +1,4 @@
 local socket = require("socket")
-local json = require("json")
 
 local room = {
 
@@ -43,7 +42,7 @@ function room:start()
         print("gamestart")
         for _, v in pairs(self.mem) do
                 print("room:start", v.fd)
-                socket.write(v.fd, json.encode(gs) .. "\n");
+                socket.write(v.fd, gs);
         end
 end
 
