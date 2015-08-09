@@ -18,13 +18,14 @@ function CMD.login()
         local cmd = "{\"cmd\":\"auth\", \"name\":\"findstr\"}\r\n\r"
         socket.send(fd, cmd)
         local res = socket.recv(fd)
+        print (res)
 end
 
 function CMD.roomlist()
         local cmd = "{\"cmd\":\"room_list\", \"page_index\":\"1\"}\r\n\r"
         socket.send(fd, cmd)
         local res = socket.recv(fd)
-        print(res)
+        print("roomlist", res)
 end
 
 function CMD.roomcreate()

@@ -49,14 +49,7 @@ local EVENT = {}
 function EVENT.accept(fd)
         conn_process[fd] = {}
         socket.packet(fd, packet.pack, packet.unpack)
-        socket.read(fd, function (fd, cmd)
-                local handler = CMD[cmd.cmd]
-                if handler then
-                        handler(fd, cmd)
-                else
-                        CMD.message(fd, cmd)
-                end
-        end)
+        print("new client:", fd)
 end
 
 function EVENT.close(fd)
@@ -64,8 +57,17 @@ function EVENT.close(fd)
         usrmgr.kick(fd)
 end
 
+function EVENT.data(fd, cmd)
+        local handler = CMD[cmd.cmd]
+        if handler then
+                handler(fd, cmd)
+        else
+                CMD.message(fd, cmd)
+        end
+end
 
-socket.register(EVENT)
+
+socket.service(EVENT)
 
 print("-------Hello Boy----------")
 
