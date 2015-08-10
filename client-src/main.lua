@@ -44,6 +44,8 @@ function CMD.roomenter()
         print(res)
         res = socket.recv(fd)
         print(res);
+        res = socket.recv(fd)
+        print(res);
 end
 
 for line in io.stdin:lines() do

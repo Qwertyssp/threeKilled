@@ -38,9 +38,13 @@ end
 
 function room:start()
         local gs = {};
+        local card = {{name="kill"}, {name="run"}, {name="peach"}}
+        
         gs.cmd = "game_start";
-        print("gamestart")
+        gs.card = card
         for _, v in pairs(self.mem) do
+                v.hp = 4
+                v.card = card
                 print("room:start", v.fd)
                 socket.write(v.fd, gs);
         end
