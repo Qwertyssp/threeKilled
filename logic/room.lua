@@ -38,7 +38,6 @@ end
 
 local function multicast(room, msg)
         for _, v in pairs(room.mem) do
-                print("multi-cast", v.fd, msg)
                 socket.write(v.fd, msg);
         end
 end
