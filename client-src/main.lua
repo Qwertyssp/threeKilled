@@ -35,6 +35,8 @@ function CMD.roomcreate()
         print(res)
         local res = socket.recv(fd)
         print(res)
+        local res = socket.recv(fd)
+        print(res)
 end
 
 function CMD.roomenter()
@@ -46,6 +48,9 @@ function CMD.roomenter()
         print(res);
         res = socket.recv(fd)
         print(res);
+        res = socket.recv(fd)
+        print(res)
+
 end
 
 for line in io.stdin:lines() do

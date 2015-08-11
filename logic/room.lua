@@ -36,17 +36,23 @@ function room:enter(fd, msg)
         return #self.mem
 end
 
+local function multicast(room, msg)
+        for _, v in pairs(room.mem) do
+                print("multi-cast", v.fd, msg)
+                socket.write(v.fd, msg);
+        end
+end
+
 function room:start()
         local gs = {};
-        local card = {{name="kill"}, {name="run"}, {name="peach"}}
+        local card = {{name="kill"}, {name="kill"}, {name="run"}, {name="peach"}}
         
         gs.cmd = "game_start";
         gs.card = card
         for _, v in pairs(self.mem) do
-                v.hp = 4
                 v.card = card
-                print("room:start", v.fd)
-                socket.write(v.fd, gs);
+                gs.uid = v.uid;
+                multicast(self, gs)
         end
 end
 
