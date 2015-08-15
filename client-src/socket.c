@@ -77,7 +77,6 @@ _recv(lua_State *L)
         _read(fd, (char *)&size, 2);
         
         size = ntohs(size);
-
         char buff[size + 1];
         _read(fd, buff, size);
 

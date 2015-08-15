@@ -1,10 +1,15 @@
 local socket = require("socket")
 local room = require("room")
-local game = {}
+
+local game = {
+        handler = {},
+}
 
 local usr_pool = {}
 local room_list = {}
 local CMD = {}
+
+setmetatable(room_list, {__mode = "v"})
 
 local function getrid()
         local rid = #room_list + 1
@@ -13,10 +18,26 @@ local function getrid()
         return rid
 end
 
-function CMD.room_create(fd, cmd)
+function game.handler.enter(fd, uid)
+        assert(usr_pool[fd] == nil)
+        usr_pool[fd] = {
+                fd = fd,
+                uid = uid,
+                room = nil
+        }
+end
+
+function game.handler.leave(fd)
+        local r = usr_pool[fd].room
+        if r then
+                r:leave(fd, cmd)
+        end
+        usr_pool[fd] = nil
+end
+
+function game.handler.room_create(fd, cmd)
         local res = {}
         local rid;
-        local r;
 
         rid = getrid()
         assert(room_list[rid] == nil)
@@ -25,76 +46,58 @@ function CMD.room_create(fd, cmd)
         res.cmd = "room_create"
         if room_list[rid] then
                 res.rid = rid
+                usr_pool[fd].room = room_list[rid]
         else
                 res.rid = -1
         end
 
-        if res.rid == rid then
-                r = room_list[rid];
-                usr_pool[fd].room = r;
-        end
-
-        socket.write(fd, res)
 end
 
-function CMD.room_list(fd, cmd)
+function game.handler.room_list(fd, cmd)
         local rl = {}
-        assert(cmd.page_index == tostring(1))
         rl.cmd = "room_list"
         rl.room = {}
+
         for k, v in pairs(room_list) do
                 print("name", v:getname())
-                rl.room[#rl.room + 1] = {name=v:getname(), rid = k}
+                rl.room[#rl.room + 1] = {name = v:getname(), count = v:getcount(), rid = k}
         end
 
         socket.write(fd, rl)
 end
 
-function CMD.room_enter(fd, cmd)
+function game.handler.room_enter(fd, cmd)
         local re = {}
-        local room;
+        local r
+
+        re.cmd = "room_enter"
         
-        re.cmd = "room_enter";
-        room = room_list[tonumber(cmd.rid)];
-        if room then
-                usr_pool[fd].room = room;
-                re.count = room:enter(fd, cmd)
+        r = room_list[tonumber(cmd.rid)]
+        if r then
+                assert(usr_pool[fd].room == nil)
+                usr_pool[fd].room = r
+                re.count = r:enter(fd, cmd)
         else
-                re.count = -1;
+                re.count = -1
         end
 
         socket.write(fd, re)
 
-        if (re.count == 2) then
-                room:start()
+        if re.count == 2 then
+                r:start()
         end
 end
 
-function CMD.room_leave(fd, cmd)
-        local room;
-        assert(usr_pool[fd].room):leave(fd);
+function game.handler.room_leave(fd, cmd)
+        local r
+        assert(usr_pool[fd].room):leave(fd, cmd)
         usr_pool[fd].room = nil
 end
 
-function game.enter(fd)
-        usr_pool[fd] = {}
-        usr_pool[fd].fd = fd
-        usr_pool[fd].room = nil 
-        usr_pool[fd].kick = nil
-end
-
-function game.kick(fd)
-        if (usr_pool[fd].kick) then
-                usr_pool[fd].kick(fd)
-        end
-        usr_pool[fd] = {}
-end
-
-function game.handler(fd, cmd)
-        if CMD[cmd.cmd] then
-                CMD[cmd.cmd](fd, cmd)
-        else
-                assert(usr_pool[fd].room):handler(fd, cmd)
+function game.handler.other(fd, cmd)
+        local r = usr_pool[fd].room
+        if r then
+                assert(r[cmd.cmd])(fd, cmd)
         end
 end
 
