@@ -35,8 +35,6 @@ function CMD.roomcreate()
         print(res)
         local res = socket.recv(fd)
         print(res)
-        local res = socket.recv(fd)
-        print(res)
 end
 
 function CMD.roomenter()
@@ -46,17 +44,26 @@ function CMD.roomenter()
         print(res)
         res = socket.recv(fd)
         print(res);
-        res = socket.recv(fd)
-        print(res);
-        res = socket.recv(fd)
-        print(res)
-
 end
+
+function CMD.sela()
+        print("sel1")
+        local cmd = "{\"cmd\":\"character_sel\", \"name\":\"liubei\"}\r\n\r"
+        socket.send(fd, cmd)
+end
+
+function CMD.selb()
+        local cmd = "{\"cmd\":\"character_sel\", \"name\":\"guanyu\"}\r\n\r"
+        socket.send(fd, cmd)
+end
+
 
 for line in io.stdin:lines() do
         local handler = CMD[line]
         if (handler) then
                 handler()
+        else
+                print("input err")
         end
 end
 

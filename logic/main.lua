@@ -30,6 +30,10 @@ function CMD.auth(fd, cmd)
         socket.write(fd, res)
 end
 
+function CMD.leave()
+
+end
+
 local EVENT = {}
 
 function EVENT.accept(fd)

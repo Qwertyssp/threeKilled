@@ -38,8 +38,8 @@ end
 function game.handler.room_create(fd, cmd)
         local res = {}
         local rid;
-
         rid = getrid()
+
         assert(room_list[rid] == nil)
         room_list[rid] = room:create(fd, cmd.uid)
 
@@ -51,6 +51,7 @@ function game.handler.room_create(fd, cmd)
                 res.rid = -1
         end
 
+        socket.write(fd, res)
 end
 
 function game.handler.room_list(fd, cmd)
@@ -97,7 +98,7 @@ end
 function game.handler.other(fd, cmd)
         local r = usr_pool[fd].room
         if r then
-                assert(r[cmd.cmd])(fd, cmd)
+                assert(r[cmd.cmd])(r, fd, cmd)
         end
 end
 
