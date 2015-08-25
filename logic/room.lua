@@ -7,9 +7,11 @@ local room = {
 
 }
 
-local function multicast(room, msg)
+local function multicast(room, msg, skip)
         for _, v in pairs(room.mem) do
-                socket.write(v.fd, msg);
+                if v.fd ~= skip then
+                        socket.write(v.fd, msg);
+                end
         end
 end
 
@@ -59,6 +61,13 @@ function room:enter(fd, msg)
         else
                 self.mem[#self.mem + 1] = mem
         end
+
+        local res = {
+                cmd = "player_enter",
+                uid = tostring(msg.uid),
+        }
+
+        multicast(self, res, fd)
 
         self.count = self.count + 1
 
