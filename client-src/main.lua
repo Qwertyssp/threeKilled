@@ -15,7 +15,7 @@ end
 
 function CMD.login()
         local a = 0
-        local cmd = "{\"cmd\":\"auth\", \"name\":\"findstr\"}\r\n\r"
+        local cmd = "{\"cmd\":\"auth\", \"name\":\"findstr\"}"
         socket.send(fd, cmd)
         local res = socket.recv(fd)
         print (res)
@@ -35,6 +35,8 @@ function CMD.roomcreate()
         print(res)
         local res = socket.recv(fd)
         print(res)
+        local res = socket.recv(fd)
+        print(res)
 end
 
 function CMD.roomenter()
@@ -47,14 +49,23 @@ function CMD.roomenter()
 end
 
 function CMD.sela()
-        print("sel1")
+        print("sela")
         local cmd = "{\"cmd\":\"character_sel\", \"name\":\"liubei\"}\r\n\r"
         socket.send(fd, cmd)
+        res = socket.recv(fd)
+        print(res);
+        res = socket.recv(fd)
+        print(res);
 end
 
 function CMD.selb()
+        print("selb")
         local cmd = "{\"cmd\":\"character_sel\", \"name\":\"guanyu\"}\r\n\r"
         socket.send(fd, cmd)
+        res = socket.recv(fd)
+        print(res);
+        res = socket.recv(fd)
+        print(res);
 end
 
 
