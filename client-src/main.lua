@@ -54,8 +54,6 @@ function CMD.sela()
         socket.send(fd, cmd)
         res = socket.recv(fd)
         print(res);
-        res = socket.recv(fd)
-        print(res);
 end
 
 function CMD.selb()
@@ -64,8 +62,18 @@ function CMD.selb()
         socket.send(fd, cmd)
         res = socket.recv(fd)
         print(res);
+end
+
+function CMD.ready()
+        print("ready")
+        local cmd = "{\"cmd\":\"ready\"}"
+        socket.send(fd, cmd)
         res = socket.recv(fd)
-        print(res);
+        print(res)
+        res = socket.recv(fd)
+        print(res)
+        res = socket.recv(fd)
+        print(res)
 end
 
 

@@ -1,4 +1,5 @@
 local socket = require("socket")
+local timer = require("timer")
 local random = math.random
 
 math.randomseed(os.time())
@@ -19,25 +20,43 @@ local MEM_STATE_ENTER           = 1
 local MEM_STATE_SELCHAR         = 2
 local MEM_STATE_PLAY            = 3
 
+local SEG_FINISH                = 1
+local SEG_GET                   = 2
+local SEG_SEND                  = 3
+local SET_GIVEUP                = 4
+
 local state_enter_handler = {}
 local state_selchar_handler = {}
 local state_play_handler = {}
 
 --TODO: t.mem will can occurs hole when the user exit the room
+
+local function new_mem(fd, uid)
+        local t = {
+                fd = fd,
+                uid = uid,
+                state = MEM_STATE_ENTER,
+                character = nil,
+                card_list = {},
+                hp = 4,
+                seg = SEG_FINISH,
+                effect_card = "",
+                current_time = 0,
+        }
+
+        return t
+end
+
 function room:create(fd, uid)
         local t = {
                 owner = uid,
                 mem = {
-                        [fd] = {
-                                fd = fd,
-                                uid = uid,
-                                state = MEM_STATE_ENTER,
-                                card = {},
-                        },
+                        [fd] = new_mem(fd, uid)
                 },
                 
                 name = tostring(uid) .. "room",
-                count = 1
+                count = 1,
+                round_index = nil,
         }
         
         self.__index = self
@@ -55,14 +74,7 @@ function room:getcount()
 end
 
 function room:enter(fd, msg)
-        local mem = {
-                fd = fd,
-                uid = msg.uid,
-                state = MEM_STATE_ENTER,
-                character = nil,
-                card_list = {},
-                hp = 4,
-        }
+        local mem = new_mem(fd, msg.uid)
 
         self.mem[fd] = mem;
         local res = {
@@ -100,28 +112,143 @@ function room:start()
         socket.write(mem.fd, gs)
 end
 
-local function begin_play(room)
-        local uindex = random(room.count)
+local function round_next(room)
+        local index = nil
+        local match = false
+        local ri = room.round_index
+        room.round_index = nil
+
+        for k, v in pairs(room.mem) do
+                if (ri == nil) or (ri == k) then
+                        match = true
+                elseif match then
+                        room.round_index = k
+                end
+        end
+
+
+        -- round the begin
+        if room.round_index == nil then
+                for k, v in pairs(room.mem) do
+                        room.round_index = k
+                        break;
+                end
+        end
+
+        room.mem[room.round_index].current_time = timer.current()
+        room.mem[room.round_index].seg = SEG_GET
+end
+
+local function seg_next(room, index)
+        local mem = room.mem[index]
+        assert(mem)
+
+        if mem.seg == SEG_GET then
+                mem.seg = SEG_SEND
+        elseif mem.seg == SEG_SEND then
+                mem.seg = SEG_GIVEUP
+        elseif mem.seg == SEG_GIVEUP then
+                mem.seg = SEG_FINISH
+        elseif mem.seg == SEG_FINISH then
+                print("error")
+        end
+
+        mem.current_time = timer.current()
+
+        return 
+end
+
+local function seg_get(room, index)
+        local mem = room.mem[index]
+        assert(mem)
+        if timer.current() - mem.current_time < 1000 then       --delay 1s
+                return 
+        else
+                seg_next(room, index)
+        end
+
         local card_add = {
                 {name = "run"},
                 {name = "peach"},
         }
 
         for _, v in pairs(card_add) do
-                table.insert(room.mem[uindex].card_list, v)
+                table.insert(room.mem[index].card_list, v)
         end
 
         local card_list = {
-                cmd = "card_list",
-                card_list = room.mem[uindex].card_list,
+                cmd = "seg_get",
+                card_list = room.mem[index].card_list,
         }
 
-        socket.write(room.mem[uindex].fd, card_list)
+        socket.write(room.mem[index].fd, card_list)
+end
 
-        for _, v in pairs(room.mem) do
-                v.state = MEM_STATE_PLAY
+local function seg_send(room, index)
+        local mem = room.mem[index]
+        assert(mem)
+        if timer.current() - mem.current_time < 3000 then       --delay 3s
+                return
+        else
+                seg_next(room, index)
         end
 
+        local res_send = {
+                cmd = "seg_send"
+        }
+
+        socket.write(room.mem[index].fd, res_send)
+end
+
+local function seg_giveup(room, index)
+        local mem = room.mem[index]
+        assert(mem)
+        if timer.current() - mem.current_time < 3000 then       --delay 1s
+                return
+        else
+                seg_next(room, index)
+                round_next(room)
+        end
+
+        local res_giveup = {
+                cmd = "seg_giveup"
+        }
+
+        socket.write(room.mem[index].fd, res_giveup)
+
+        return
+end
+
+local function seg_finish(room, index)
+
+end
+
+local function update_user(room)
+        
+        local index = room.round_index
+        local mem = room.mem[index]
+        
+        if mem then
+                timer.add(3000, update_user, room)
+        end
+
+        assert(mem.state == MEM_STATE_PLAY)
+        if (mem.seg == SEG_GET) then
+                seg_get(room, index)
+        elseif (mem.seg == SEG_SEND) then
+                seg_send(room, index)
+        elseif (mem.seg == SEG_GIVEUP) then
+                seg_giveup(room, index)
+        elseif (mem.seg == SEG_FINISH) then
+                seg_finish(room, index)
+        else
+                print("unknow segment", mem.state)
+        end
+end
+
+local function begin_play(room)
+        round_next(room)
+        update_user(room)
 end
 
 -- the character process
@@ -191,10 +318,26 @@ function state_enter_handler.character_sel(self, fd, msg)
 
         socket.write(fd, origin_card)
 
-        if character_sel_next(self, msg.name) == false then
-                begin_play(self)               
+        character_sel_next(self, msg.name)
+
+        return
+end
+
+--state selchar
+function state_selchar_handler.ready(self, fd, msg)
+        self.mem[fd].state = MEM_STATE_PLAY
+        
+        local all_ready = true
+        for _, v in pairs(self.mem) do
+                if v.state ~= MEM_STATE_PLAY then
+                        all_ready = false
+                        break;
+                end
         end
 
+        if all_ready then
+                begin_play(self)
+        end
 end
 
 
