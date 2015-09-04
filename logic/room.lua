@@ -17,13 +17,18 @@ end
 
 local MEM_STATE_ENTER           = 1
 local MEM_STATE_SELCHAR         = 2
+local MEM_STATE_PLAY            = 3
+
+local state_enter_handler = {}
+local state_selchar_handler = {}
+local state_play_handler = {}
 
 --TODO: t.mem will can occurs hole when the user exit the room
 function room:create(fd, uid)
         local t = {
                 owner = uid,
                 mem = {
-                        {
+                        [fd] = {
                                 fd = fd,
                                 uid = uid,
                                 state = MEM_STATE_ENTER,
@@ -32,6 +37,7 @@ function room:create(fd, uid)
                 },
                 
                 name = tostring(uid) .. "room",
+                count = 1
         }
         
         self.__index = self
@@ -45,7 +51,7 @@ function room:getname()
 end
 
 function room:getcount()
-        return #self.mem
+        return self.count
 end
 
 function room:enter(fd, msg)
@@ -58,33 +64,44 @@ function room:enter(fd, msg)
                 hp = 4,
         }
 
-        table.insert(self.mem, 1, mem);
+        self.mem[fd] = mem;
         local res = {
                 cmd = "player_enter",
                 uid = tostring(msg.uid),
         }
 
+        self.count = self.count + 1
+
         multicast(self, res, fd)
 
-        return #self.mem
+        return self.count
 end
+
+function room:leave(fd)
+        assert(self.count >= 1)
+        self.mem[fd] = nil
+        self.count = self.count - 1
+
+        return self.count
+end
+
 
 function room:start()
         self.character_list = {{name = "liubei"}, {name = "guanyu"}, {name = "zhangfei"}}
-        assert(#self.mem == 2)
+        assert(self.count == 2)
         local gs = {
                 cmd = "character_list",
                 character_list = self.character_list,
         }
 
-        local index = random(#self.mem)
+        local index = random(self.count)
         local mem = self.mem[index];
 
         socket.write(mem.fd, gs)
 end
 
 local function begin_play(room)
-        local uindex = random(#room.mem)
+        local uindex = random(room.count)
         local card_add = {
                 {name = "run"},
                 {name = "peach"},
@@ -100,7 +117,14 @@ local function begin_play(room)
         }
 
         socket.write(room.mem[uindex].fd, card_list)
+
+        for _, v in pairs(room.mem) do
+                v.state = MEM_STATE_PLAY
+        end
+
 end
+
+-- the character process
 
 local function character_sel_next(room, character)
         local usr_list = {}
@@ -137,7 +161,8 @@ local function character_sel_next(room, character)
  
 end
 
-function room:character_sel(fd, msg)
+--state enter
+function state_enter_handler.character_sel(self, fd, msg)
         local i
         for k, v in ipairs(self.mem) do
                 if v.fd == fd then
@@ -172,15 +197,22 @@ function room:character_sel(fd, msg)
 
 end
 
-function room:leave(fd)
-        for k, v in pairs(self.mem) do
-                if v.fd == fd then
-                        table.remove(self.mem, k)
-                        break
-                end
+
+function room:process(fd, msg)
+        local func = nil
+        if (self.mem[fd].state == MEM_STATE_ENTER) then
+                func = state_enter_handler[msg.cmd]
+        elseif (self.mem[fd].state == MEM_STATE_SELCHAR) then
+                func = state_selchar_handler[msg.cmd]
+        elseif (self.mem[fd].state == MEM_STATE_PLAY) then
+                func = state_play_handler[msg.cmd]
         end
 
-        return #self.mem
+        if func then
+                func(self, fd, msg)
+        else
+                print("room:process error cmd:", self.mem[fd].state, msg.cmd)
+        end
 end
 
 

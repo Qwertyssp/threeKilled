@@ -98,7 +98,7 @@ end
 function game.handler.other(fd, cmd)
         local r = usr_pool[fd].room
         if r then
-                assert(r[cmd.cmd])(r, fd, cmd)
+                r:process(fd, cmd)
         end
 end
 
